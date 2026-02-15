@@ -205,18 +205,24 @@
 
     function send(action, payload = {}) {
       const data = { action, payload, ts: Date.now() };
-      const raw = JSON.stringify(data);
+const raw = JSON.stringify(data);
 
-      if (tg) {
-        tg.sendData(raw);
-        // Optionnel: feedback haptique
-        try { tg.HapticFeedback.impactOccurred('light'); } catch(e){}
-      } else {
-        // hors Telegram : debug
-        console.log('[sendData]', raw);
-        alert('Hors Telegram — sendData() loggé en console:\\n' + raw);
-      }
-    }
+if (tg) {
+  tg.sendData(raw);
+
+  // Feedback immédiat
+  try { tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+  try {
+    tg.showPopup({
+      title: "Envoyé ✅",
+      message: `Action: ${action}`,
+      buttons: [{ type: "ok" }]
+    });
+  } catch(e) {}
+} else {
+  console.log('[sendData]', raw);
+  alert('Hors Telegram — sendData() loggé en console:\\n' + raw);
+}
 
     // --- UI content ---
     const MODE = getStartParam();
