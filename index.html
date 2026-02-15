@@ -60,6 +60,311 @@
     }
     .dot{width:8px; height:8px; border-radius:99px; background:var(--accent2); box-shadow:0 0 0 6px rgba(34,197,94,.12)}
     .grid{display:grid; gap:12px; margin-top:14px}
+    @media(min-width:840px){ .grid{grid-template-columns: 1.2fr .8fr} }
+    .panel{
+      border:1px solid var(--border); border-radius:var(--r);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .panel h2{margin:0 0 10px; font-size:14px; color:rgba(234,240,255,.92); letter-spacing:.3px}
+    .cards{display:grid; gap:10px}
+    @media(min-width:840px){ .cards{grid-template-columns:repeat(2,1fr)} }
+    .card{
+      border:1px solid var(--border); border-radius:16px; padding:12px;
+      background: radial-gradient(700px 220px at 0% 0%, rgba(124,92,255,.16), transparent 55%),
+                  radial-gradient(500px 220px at 100% 0%, rgba(34,197,94,.12), transparent 55%),
+                  rgba(17,31,61,.70);
+      transition: transform .12s ease, border-color .12s ease;
+      cursor:pointer;
+    }
+    .card:hover{transform: translateY(-2px); border-color: rgba(255,255,255,.14)}
+    .card .k{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .tag{
+      font-size:12px; color:rgba(255,255,255,.85);
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+    }
+    .card h3{margin:10px 0 4px; font-size:16px}
+    .card p{margin:0; color:var(--muted); font-size:13px}
+    .nav{
+      display:flex; flex-wrap:wrap; gap:8px; margin-top:12px
+    }
+    .btn{
+      border:1px solid var(--border); background: rgba(15,26,51,.6);
+      color:var(--text); padding:10px 12px; border-radius:14px;
+      font-size:13px; cursor:pointer;
+      display:flex; align-items:center; gap:8px;
+      transition: transform .10s ease, border-color .10s ease, background .10s ease;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.16); background: rgba(15,26,51,.78)}
+    .btn.primary{background: linear-gradient(135deg, rgba(124,92,255,.85), rgba(124,92,255,.40)); border-color: rgba(124,92,255,.35)}
+    .btn.good{background: linear-gradient(135deg, rgba(34,197,94,.75), rgba(34,197,94,.30)); border-color: rgba(34,197,94,.30)}
+    .btn.warn{background: linear-gradient(135deg, rgba(245,158,11,.75), rgba(245,158,11,.28)); border-color: rgba(245,158,11,.30)}
+    .btn.danger{background: linear-gradient(135deg, rgba(239,68,68,.70), rgba(239,68,68,.25)); border-color: rgba(239,68,68,.28)}
+    .small{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.4}
+    .list{margin-top:10px; display:grid; gap:8px}
+    .row{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      padding:10px 10px; border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(17,31,61,.55);
+    }
+    .row b{font-size:13px}
+    .row span{display:block; font-size:12px; color:var(--muted); margin-top:2px}
+    .badge{
+      font-family:var(--mono); font-size:11px;
+      padding:6px 8px; border-radius:999px;
+      border:1px solid var(--border);
+      color: rgba(255,255,255,.9);
+      background: rgba(0,0,0,.18);
+      white-space:nowrap;
+    }
+    .footer{
+      margin-top:14px; padding:12px; border-radius:var(--r);
+      border:1px dashed rgba(255,255,255,.14);
+      color:var(--muted); font-size:12px;
+      background: rgba(15,26,51,.35);
+    }
+    code{font-family:var(--mono); font-size:12px}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">
+          <b>Léo OS</b>
+          <span>Mini App Telegram — Dashboard & modules</span>
+        </div>
+      </div>
+      <div class="chip" title="Paramètre startapp / start_param">
+        <span class="dot"></span>
+        <span id="modeChip">mode: <code>today</code></span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Dashboard</h2>
+        <div class="cards" id="cards">
+          <!-- cards injected by JS -->
+        </div>
+
+        <div class="nav">
+          <div class="btn primary" onclick="go('today')">🏠 Aujourd’hui</div>
+          <div class="btn" onclick="go('admin')">📂 Admin</div>
+          <div class="btn" onclick="go('projects')">🧩 Projets</div>
+          <div class="btn" onclick="go('content')">✍️ Contenu</div>
+          <div class="btn good" onclick="go('coach')">🏋️ Coach</div>
+        </div>
+
+        <div class="small" id="hint"></div>
+      </section>
+
+      <aside class="panel">
+        <h2>Actions rapides</h2>
+        <div class="list" id="actions"></div>
+
+        <div class="footer">
+          <div><b>Telegram ↔ Bot</b></div>
+          <div>Les boutons envoient une action au bot via <code>Telegram.WebApp.sendData()</code>.</div>
+          <div>À toi (OpenClaw) de traiter et répondre dans le chat.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // --- Telegram WebApp helpers ---
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+    function getStartParam() {
+      // 1) Telegram official
+      if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) return tg.initDataUnsafe.start_param;
+
+      // 2) Fallback URL param used by Telegram: tgWebAppStartParam
+      const u = new URL(window.location.href);
+      const p = u.searchParams.get('tgWebAppStartParam');
+      if (p) return p;
+
+      // 3) Custom fallback if you want: ?startapp=
+      const p2 = u.searchParams.get('startapp');
+      if (p2) return p2;
+
+      return 'today';
+    }
+
+    function setModeChip(mode){
+      document.getElementById('modeChip').innerHTML = `mode: <code>${mode}</code>`;
+    }
+
+    function send(action, payload = {}) {
+      const data = { action, payload, ts: Date.now() };
+      const raw = JSON.stringify(data);
+
+      if (tg) {
+        tg.sendData(raw);
+        // Optionnel: feedback haptique
+        try { tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+      } else {
+        // hors Telegram : debug
+        console.log('[sendData]', raw);
+        alert('Hors Telegram — sendData() loggé en console:\\n' + raw);
+      }
+    }
+
+    // --- UI content ---
+    const MODE = getStartParam();
+
+    const cardsByMode = {
+      today: [
+        { tag:'Focus', title:'Top 3 priorités', desc:'Léo te propose 3 actions maximales (1 admin, 1 projet, 1 santé).', action:'today_plan' },
+        { tag:'Échéances', title:'À ne pas rater', desc:'Récap agenda + deadlines (Google Calendar).', action:'today_deadlines' },
+        { tag:'Coach', title:'Séance du jour', desc:'Plan minimal viable + objectif perte de poids.', action:'coach_today' },
+        { tag:'Contenu', title:'1 post prêt', desc:'Idée + brouillon LinkedIn ou blog.', action:'content_one' },
+      ],
+      admin: [
+        { tag:'CAF/Assurance', title:'Checklist documents', desc:'Liste claire + prochaine action.', action:'admin_checklist' },
+        { tag:'Factures', title:'Échéances énergie', desc:'Voir ce qui arrive + préparer paiement.', action:'admin_energy' },
+        { tag:'Courriers', title:'Générer un courrier', desc:'Modèle + validation avant envoi.', action:'admin_letter' },
+        { tag:'Journal', title:'Trace des actions', desc:'Log Notion (audit).', action:'admin_log' },
+      ],
+      projects: [
+        { tag:'H1/H2', title:'Vue Projets', desc:'Liste + statut + prochaine étape.', action:'projects_list' },
+        { tag:'Workflow', title:'Mode exécution', desc:'Étapes une par une, tu réponds “ok”.', action:'projects_run' },
+        { tag:'Décision', title:'Arbitrage', desc:'Léo te force à choisir (objectivement).', action:'projects_arbitrate' },
+        { tag:'Risque', title:'Blocages', desc:'Ce qui freine + solution minimaliste.', action:'projects_blockers' },
+      ],
+      content: [
+        { tag:'LinkedIn', title:'Post prêt à publier', desc:'Hook + structure + ton pro.', action:'content_linkedin' },
+        { tag:'SEO', title:'Plan d’article', desc:'H1/H2 + mots-clés + maillage.', action:'content_seo' },
+        { tag:'Repurpose', title:'Recycler', desc:'Transformer 1 idée en 3 formats.', action:'content_repurpose' },
+        { tag:'Calendrier', title:'Programmer', desc:'Créer un événement éditorial.', action:'content_schedule' },
+      ],
+      coach: [
+        { tag:'Check-in', title:'Point rapide', desc:'Poids, sommeil, faim, énergie (30s).', action:'coach_checkin' },
+        { tag:'Sport', title:'Séance', desc:'Plan du jour + alternative courte.', action:'coach_workout' },
+        { tag:'Nutrition', title:'Cible calories', desc:'Suggestion simple + repas type.', action:'coach_nutrition' },
+        { tag:'Bilan', title:'Hebdo', desc:'Tendance + ajustements.', action:'coach_weekly' },
+      ],
+    };
+
+    const actionsByMode = {
+      today: [
+        { label:'📌 Générer mon plan du jour', kind:'primary', action:'today_plan' },
+        { label:'📅 Récap agenda (7 jours)', kind:'', action:'today_deadlines' },
+        { label:'🏋️ Séance du jour', kind:'good', action:'coach_today' },
+        { label:'✍️ 1 post LinkedIn', kind:'', action:'content_linkedin' },
+      ],
+      admin: [
+        { label:'🧾 Checklist admin', kind:'primary', action:'admin_checklist' },
+        { label:'💡 Échéances énergie', kind:'warn', action:'admin_energy' },
+        { label:'✉️ Générer courrier', kind:'', action:'admin_letter' },
+        { label:'🧠 Log action Notion', kind:'', action:'admin_log' },
+      ],
+      projects: [
+        { label:'🧩 Liste projets', kind:'primary', action:'projects_list' },
+        { label:'▶️ Lancer workflow', kind:'good', action:'projects_run' },
+        { label:'⚖️ Arbitrage', kind:'warn', action:'projects_arbitrate' },
+        { label:'🧯 Blocages', kind:'danger', action:'projects_blockers' },
+      ],
+      content: [
+        { label:'📝 Post LinkedIn', kind:'primary', action:'content_linkedin' },
+        { label:'🔎 Plan SEO', kind:'', action:'content_seo' },
+        { label:'♻️ Recycler', kind:'', action:'content_repurpose' },
+        { label:'📅 Programmer', kind:'good', action:'content_schedule' },
+      ],
+      coach: [
+        { label:'✅ Check-in 30s', kind:'primary', action:'coach_checkin' },
+        { label:'🏋️ Entraînement', kind:'good', action:'coach_workout' },
+        { label:'🥗 Nutrition', kind:'', action:'coach_nutrition' },
+        { label:'📈 Bilan hebdo', kind:'warn', action:'coach_weekly' },
+      ],
+    };
+
+    function go(mode){
+      // Navigation interne (sans recharger)
+      render(mode);
+      // Optionnel: informe le bot du changement d’onglet
+      send('ui_navigate', { mode });
+    }
+
+    function render(mode){
+      setModeChip(mode);
+      const cards = cardsByMode[mode] || cardsByMode.today;
+
+      const cardsEl = document.getElementById('cards');
+      cardsEl.innerHTML = cards.map(c => `
+        <div class="card" onclick='send("${c.action}", { mode: "${mode}" })'>
+          <div class="k"><span class="tag">${c.tag}</span><span class="badge">${mode}</span></div>
+          <h3>${c.title}</h3>
+          <p>${c.desc}</p>
+        </div>
+      `).join('');
+
+      const actionsEl = document.getElementById('actions');
+      const acts = actionsByMode[mode] || actionsByMode.today;
+      actionsEl.innerHTML = acts.map(a => `
+        <div class="row">
+          <div>
+            <b>${a.label}</b>
+            <span>Envoie une action au bot (OpenClaw) → réponse dans le chat</span>
+          </div>
+          <div class="btn ${a.kind}" onclick='send("${a.action}", { mode: "${mode}" })'>Lancer</div>
+        </div>
+      `).join('');
+
+      const hint = document.getElementById('hint');
+      hint.innerHTML = `
+        Astuce : lance l’app avec un paramètre Telegram pour ouvrir un module directement :
+        <code>startapp=${mode}</code> (ou <code>tgWebAppStartParam=${mode}</code> en URL).
+      `;
+
+      // Telegram UI polish
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+          tg.setHeaderColor('#0B1220');
+          tg.setBackgroundColor('#0B1220');
+        } catch(e){}
+      }
+    }
+
+    render(MODE);
+  </script>
+</body>
+</html>      width:42px; height:42px; border-radius:14px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), transparent 55%),
+                  linear-gradient(135deg, rgba(124,92,255,.9), rgba(34,197,94,.55));
+      border:1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(124,92,255,.25);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:""; position:absolute; inset:-40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+      transform: rotate(25deg);
+      animation: shine 4.8s ease-in-out infinite;
+    }
+    @keyframes shine{0%,55%{transform:translateX(-35%) rotate(25deg)} 70%,100%{transform:translateX(35%) rotate(25deg)}}
+    .title{display:flex; flex-direction:column; line-height:1.1}
+    .title b{font-size:16px; letter-spacing:.2px}
+    .title span{font-size:12px; color:var(--muted)}
+    .chip{
+      font-family:var(--mono); font-size:12px; color:rgba(255,255,255,.88);
+      padding:8px 10px; border:1px solid var(--border); border-radius:999px;
+      background:rgba(15,26,51,.55);
+      display:flex; align-items:center; gap:8px;
+    }
+    .dot{width:8px; height:8px; border-radius:99px; background:var(--accent2); box-shadow:0 0 0 6px rgba(34,197,94,.12)}
+    .grid{display:grid; gap:12px; margin-top:14px}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
