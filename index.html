@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Léo OS</title>
+  <meta name="theme-color" content="#060A10"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* ── Reset & Variables ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+
+    :root {
+      --bg:       #060A10;
+      --surface:  #0A1018;
+      --panel:    #0D1520;
+      --em:       #00FF7F;   /* émeraude électrique */
+      --em-dim:   rgba(0,255,127,.12);
+      --em-glow:  rgba(0,255,127,.35);
+      --amber:    #FF8C00;
+      --amber-dim:rgba(255,140,0,.12);
+      --red:      #FF3A3A;
+      --blue:     #3AB4FF;
+      --text:     #C8DDF0;
+      --muted:    #4A6080;
+      --border:   rgba(0,255,127,.10);
+      --border-hi:rgba(0,255,127,.30);
+      --mono:     'JetBrains Mono', monospace;
+      --display:  'Oxanium', sans-serif;
+      --r:        4px;     /* coins petits — style HUD angulaire */
+      --cut:      12px;    /* taille des coins coupés */
+    }
+
+    /* ── Fond animé ───────────────────────────────────── */
+    body {
+      font-family: var(--display);
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Grille de fond */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,255,127,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,127,.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridPulse 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    /* Scanlines overlay */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.08) 2px,
+        rgba(0,0,0,.08) 4px
+      );
+      pointer-events: none;
+    }
+
+    @keyframes gridPulse {
+      0%, 100% { opacity: .6 }
+      50%       { opacity: 1 }
+    }
+
+    /* Vignette radiale */
+    .vignette {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,.7) 100%);
+      pointer-events: none;
+    }
+
+    /* ── Layout ───────────────────────────────────────── */
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 1000px; margin: 0 auto;
+      padding: 12px 10px 32px;
+    }
+
+    /* ── Topbar ───────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 16px;
+      border: 1px solid var(--border-hi);
+      background: rgba(10,16,24,.92);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 8px; z-index: 10;
+      /* coin coupé haut-droite */
+      clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+      animation: fadeDown .4s ease both;
+    }
+
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-8px) } }
+
+    /* Ligne décorative verte en haut */
+    .topbar::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: var(--cut);
+      height: 1px;
+      background: linear-gradient(90deg, var(--em), transparent 70%);
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px }
+
+    /* Logo avec glitch */
+    .logo {
+      width: 40px; height: 40px; flex-shrink: 0;
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+      background: var(--bg);
+      border: 1px solid var(--border-hi);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 18px; font-weight: 500;
+      color: var(--em);
+      text-shadow: 0 0 12px var(--em-glow);
+      animation: glitchLogo 6s ease-in-out infinite;
+      cursor: default;
+    }
+
+    @keyframes glitchLogo {
+      0%,89%,100% { text-shadow: 0 0 12px var(--em-glow) }
+      90% { text-shadow: -2px 0 var(--blue), 2px 0 var(--em); filter:brightness(1.5) }
+      92% { text-shadow: 2px 0 var(--amber), -2px 0 var(--em) }
+      94% { text-shadow: 0 0 12px var(--em-glow) }
+    }
+
+    .brand-info { line-height: 1 }
+    .brand-info .name {
+      font-family: var(--display); font-size: 17px; font-weight: 700;
+      letter-spacing: .5px; color: #EAF4FF;
+    }
+    .brand-info .sub {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      margin-top: 4px; letter-spacing: .5px; text-transform: uppercase;
+    }
+
+    /* Status pill */
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      background: var(--em-dim);
+      font-family: var(--mono); font-size: 11px; color: var(--em);
+      letter-spacing: .3px;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    }
+
+    .pulse-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--em);
+      box-shadow: 0 0 0 0 var(--em-glow);
+      animation: pulseRing 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseRing {
+      0%   { box-shadow: 0 0 0 0 var(--em-glow) }
+      70%  { box-shadow: 0 0 0 6px rgba(0,255,127,0) }
+      100% { box-shadow: 0 0 0 0 rgba(0,255,127,0) }
+    }
+
+    /* ── Mode tabs ────────────────────────────────────── */
+    .mode-tabs {
+      display: flex; gap: 4px; margin-top: 10px;
+      overflow-x: auto; padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .mode-tabs::-webkit-scrollbar { display: none }
+
+    .tab {
+      flex-shrink: 0; padding: 8px 14px;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .8px; color: var(--muted);
+      border: 1px solid rgba(255,255,255,.06);
+      background: transparent; cursor: pointer;
+      transition: all .15s ease;
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+      position: relative; overflow: hidden;
+    }
+
+    .tab::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: var(--em); transform: scaleX(0); transform-origin: left;
+      transition: transform .2s ease;
+    }
+
+    .tab:hover { color: var(--text); border-color: var(--border) }
+    .tab.active {
+      color: var(--em); border-color: var(--border-hi);
+      background: var(--em-dim);
+      text-shadow: 0 0 8px var(--em-glow);
+    }
+    .tab.active::after { transform: scaleX(1) }
+
+    /* ── Grid ─────────────────────────────────────────── */
+    .grid {
+      display: grid; gap: 10px; margin-top: 10px;
+    }
+    @media(min-width:780px) { .grid { grid-template-columns: 1.25fr .75fr } }
+
+    /* ── Panel ────────────────────────────────────────── */
+    .panel {
+      border: 1px solid var(--border);
+      background: rgba(10,16,24,.80);
+      backdrop-filter: blur(8px);
+      padding: 14px;
+      position: relative; overflow: hidden;
+      clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: var(--cut);
+      height: 1px;
+      background: linear-gradient(90deg, var(--em), transparent 60%);
+    }
+
+    /* Coin décoratif haut-droite */
+    .panel::after {
+      content: '';
+      position: absolute; top: 0; right: 0;
+      width: var(--cut); height: var(--cut);
+      background: var(--em);
+      clip-path: polygon(0 0, 100% 100%, 100% 0);
+      opacity: .7;
+    }
+
+    .panel-title {
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--em);
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title::before {
+      content: '//'; color: var(--muted); font-size: 10px;
+    }
+
+    /* ── Cards ────────────────────────────────────────── */
+    .cards { display: grid; gap: 8px }
+    @media(min-width:500px) { .cards { grid-template-columns: repeat(2,1fr) } }
+
+    .card {
+      border: 1px solid var(--border);
+      background: rgba(13,21,32,.90);
+      padding: 12px 14px;
+      cursor: pointer; position: relative; overflow: hidden;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+      transition: border-color .15s, transform .12s;
+    }
+
+    /* Sweep au hover */
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,255,127,.06), transparent);
+      transition: left .4s ease;
+    }
+    .card:hover::before { left: 150% }
+    .card:hover { border-color: var(--border-hi); transform: translateY(-1px) }
+    .card:active { transform: scale(.98); opacity: .85 }
+
+    /* Coin coupé haut-droite vert */
+    .card::after {
+      content: '';
+      position: absolute; top: 0; right: 0;
+      width: 8px; height: 8px;
+      background: var(--em);
+      clip-path: polygon(0 0, 100% 100%, 100% 0);
+      opacity: .4; transition: opacity .15s;
+    }
+    .card:hover::after { opacity: .9 }
+
+    .card-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-tag {
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .8px; color: var(--em);
+      padding: 3px 7px; border: 1px solid var(--border-hi);
+      background: var(--em-dim);
+    }
+    .card-badge {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+    }
+    .card h3 {
+      font-size: 14px; font-weight: 600; color: #DCE8F8;
+      margin-bottom: 4px; letter-spacing: .2px;
+    }
+    .card p {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Boutons de navigation ────────────────────────── */
+    /* Gérés par .tab déjà */
+
+    /* ── Actions rapides ──────────────────────────────── */
+    .actions-list { display: grid; gap: 6px; margin-top: 4px }
+
+    .action-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: rgba(13,21,32,.6);
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+    }
+
+    .action-info { flex: 1; min-width: 0 }
+    .action-label {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .action-desc {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Bouton d'action ──────────────────────────────── */
+    .btn {
+      flex-shrink: 0; padding: 8px 14px;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .6px;
+      border: 1px solid var(--border); color: var(--text);
+      background: transparent; cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+      position: relative; overflow: hidden;
+      transition: all .12s ease; white-space: nowrap;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.04));
+      opacity: 0; transition: opacity .15s;
+    }
+    .btn:hover::before { opacity: 1 }
+    .btn:hover { transform: translateY(-1px) }
+    .btn:active { transform: scale(.96); opacity: .8 }
+
+    .btn.em {
+      border-color: var(--border-hi);
+      color: var(--em);
+      background: var(--em-dim);
+      text-shadow: 0 0 8px var(--em-glow);
+      box-shadow: inset 0 0 12px var(--em-dim);
+    }
+    .btn.em:hover {
+      background: rgba(0,255,127,.18);
+      box-shadow: inset 0 0 20px var(--em-dim), 0 0 12px var(--em-dim);
+    }
+    .btn.amber {
+      border-color: rgba(255,140,0,.3);
+      color: var(--amber);
+      background: var(--amber-dim);
+    }
+    .btn.red {
+      border-color: rgba(255,58,58,.3);
+      color: var(--red);
+      background: rgba(255,58,58,.08);
+    }
+
+    /* ── Hint ─────────────────────────────────────────── */
+    .hint {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      margin-top: 12px; padding: 8px 10px;
+      border-left: 2px solid var(--border-hi);
+      background: rgba(0,255,127,.03);
+      line-height: 1.6;
+    }
+    .hint code {
+      font-family: var(--mono); color: var(--em); font-size: 10px;
+    }
+
+    /* ── Footer panel ─────────────────────────────────── */
+    .info-box {
+      margin-top: 10px; padding: 10px 12px;
+      border: 1px dashed rgba(0,255,127,.15);
+      background: rgba(0,255,127,.02);
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      line-height: 1.7;
+    }
+    .info-box strong { color: var(--em); font-weight: 500 }
+
+    /* ── Toast ────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      padding: 10px 20px;
+      background: rgba(6,10,16,.95);
+      border: 1px solid var(--border-hi);
+      color: var(--em);
+      font-family: var(--mono); font-size: 12px; letter-spacing: .3px;
+      z-index: 999; backdrop-filter: blur(12px);
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      opacity: 0; pointer-events: none; white-space: nowrap;
+      text-shadow: 0 0 8px var(--em-glow);
+      box-shadow: 0 0 20px var(--em-dim);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1 }
+    #toast.err {
+      border-color: rgba(255,58,58,.4);
+      color: var(--red);
+      text-shadow: 0 0 8px rgba(255,58,58,.4);
+      box-shadow: 0 0 20px rgba(255,58,58,.1);
+    }
+
+    /* ── Animations d'entrée par mode ─────────────────── */
+    .card, .action-row {
+      animation: fadeUp .3s ease both;
+    }
+    .card:nth-child(1), .action-row:nth-child(1) { animation-delay: .04s }
+    .card:nth-child(2), .action-row:nth-child(2) { animation-delay: .08s }
+    .card:nth-child(3), .action-row:nth-child(3) { animation-delay: .12s }
+    .card:nth-child(4), .action-row:nth-child(4) { animation-delay: .16s }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(10px) }
+      to   { opacity:1; transform:translateY(0) }
+    }
+
+    /* ── Loading spinner ──────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 1px solid var(--border); border-top-color: var(--em);
+      border-radius: 50%; animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg) } }
+  </style>
+</head>
+
+<body>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div class="wrap">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-label="Léo">🦞</div>
+        <div class="brand-info">
+          <div class="name">LÉO OS</div>
+          <div class="sub">Assistant — Horizons System</div>
+        </div>
+      </div>
+      <div class="status-pill">
+        <span class="pulse-dot"></span>
+        <span id="modeChip">mode://today</span>
+      </div>
+    </header>
+
+    <!-- Mode tabs -->
+    <nav class="mode-tabs" role="tablist" id="modeTabs"></nav>
+
+    <!-- Grid principal -->
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-title">Dashboard</div>
+        <div class="cards" id="cards"></div>
+        <div class="hint" id="hint"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-title">Actions rapides</div>
+        <div class="actions-list" id="actions"></div>
+        <div class="info-box" id="info-box">
+          <strong>Léo ← Mini App</strong><br>
+          Chaque action envoie une commande via le proxy sécurisé du VPS.<br>
+          Léo reçoit via OpenClaw et répond dans le chat.
+        </div>
+      </aside>
+    </div>
+
+  </div>
+
+  <!-- Toast feedback -->
+  <div id="toast" role="alert" aria-live="polite"></div>
+
+  <script>
+    // ─── CONFIG ─────────────────────────────────────────────────────────────
+    // URL du proxy sur ton VPS (ex: https://leo.ton-domaine.com/leo-action)
+    // Token et chat_id restent côté serveur — ce fichier ne contient aucun secret.
+    const PROXY_URL = 'https://leo.estatellas.online/leo-action';
+
+    // ─── SDK Telegram ────────────────────────────────────────────────────────
+    const tg = window.Telegram?.WebApp ?? null;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try { tg.setHeaderColor('#060A10') }     catch(e){}
+      try { tg.setBackgroundColor('#060A10') } catch(e){}
+    }
+
+    function getStartParam() {
+      if (tg?.initDataUnsafe?.start_param) return tg.initDataUnsafe.start_param;
+      const u = new URL(location.href);
+      return u.searchParams.get('tgWebAppStartParam') || u.searchParams.get('startapp') || 'today';
+    }
+
+    let currentMode = 'today';
+
+    // ─── Toast ───────────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, isErr = false) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.toggle('err', isErr);
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    // ─── Envoi via proxy ─────────────────────────────────────────────────────
+    async function send(action, label = '') {
+      if (tg) { try { tg.HapticFeedback.impactOccurred('light') } catch(e){} }
+
+      // Hors Telegram : simulation console
+      if (!tg?.initData) {
+        console.log('[Léo OS — dev]', action);
+        showToast('🧪 Dev : ' + action);
+        return;
+      }
+
+      const btn = document.querySelector(`[data-action="${action}"]`);
+      if (btn) btn.innerHTML = '<span class="spinner"></span>...';
+
+      try {
+        const resp = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            initData: tg.initData,
+          }),
+        });
+
+        const data = await resp.json();
+
+        if (data.ok) {
+          showToast('🦞 Léo reçoit — ' + (label || action));
+        } else {
+          showToast('⚠ ' + (data.error || 'Erreur proxy'), true);
+        }
+      } catch(err) {
+        showToast('❌ Proxy injoignable — VPS actif ?', true);
+        console.error('[Léo OS]', err);
+      } finally {
+        if (btn) btn.innerHTML = 'Exec';
+      }
+    }
+
+    // ─── Données ─────────────────────────────────────────────────────────────
+    const MODES = [
+      { id:'today',    icon:'⬡', label:'Today'   },
+      { id:'admin',    icon:'⬡', label:'Admin'   },
+      { id:'projects', icon:'⬡', label:'Projets' },
+      { id:'content',  icon:'⬡', label:'Content' },
+      { id:'coach',    icon:'⬡', label:'Coach'   },
+    ];
+
+    const cards = {
+      today:    [{tag:'Focus',    h:'Top 3 priorités',desc:'1 admin, 1 projet, 1 santé.',      a:'today_plan'},
+                 {tag:'Agenda',   h:'À ne pas rater', desc:'Deadlines 7 jours — Notion.',      a:'today_deadlines'},
+                 {tag:'Sport',    h:'Séance du jour', desc:'Plan minimal viable.',              a:'coach_today'},
+                 {tag:'Contenu',  h:'1 post prêt',   desc:'Brouillon LinkedIn ou blog.',       a:'content_one'}],
+      admin:    [{tag:'Docs',     h:'Checklist',      desc:'CAF, assurances — prochaine action.',a:'admin_checklist'},
+                 {tag:'Énergie',  h:'Échéances',      desc:'Factures à préparer.',              a:'admin_energy'},
+                 {tag:'Courrier', h:'Générer courrier',desc:'Modèle + validation.',             a:'admin_letter'},
+                 {tag:'Log',      h:'Journal Notion', desc:'Trace des actions (audit).',        a:'admin_log'}],
+      projects: [{tag:'H2',       h:'Vue Projets',    desc:'Statut + prochaine étape.',         a:'projects_list'},
+                 {tag:'Exec',     h:'Mode exécution', desc:'Étapes une par une.',               a:'projects_run'},
+                 {tag:'Arbitre',  h:'Arbitrage',      desc:'Choix objectif entre projets.',     a:'projects_arbitrate'},
+                 {tag:'Blocage',  h:'Blocages',       desc:'Freins + solution minimaliste.',    a:'projects_blockers'}],
+      content:  [{tag:'LinkedIn', h:'Post à publier', desc:'Hook + structure + ton pro.',       a:'content_linkedin'},
+                 {tag:'SEO',      h:"Plan d'article", desc:'H1/H2 + mots-clés + maillage.',    a:'content_seo'},
+                 {tag:'Recycle',  h:'Recycler',       desc:'1 idée → 3 formats.',              a:'content_repurpose'},
+                 {tag:'Cal',      h:'Programmer',     desc:'Événement éditorial.',              a:'content_schedule'}],
+      coach:    [{tag:'Check',    h:'Point rapide',   desc:'Poids, sommeil, faim, énergie.',   a:'coach_checkin'},
+                 {tag:'Sport',    h:'Entraînement',   desc:'Plan jour + alternative courte.',  a:'coach_workout'},
+                 {tag:'Nutri',    h:'Cible calories', desc:'Suggestion repas type.',           a:'coach_nutrition'},
+                 {tag:'Bilan',    h:'Hebdo',          desc:'Tendances + ajustements.',         a:'coach_weekly'}],
+    };
+
+    const actions = {
+      today:    [{l:'⬡ Plan du jour',    k:'em',    a:'today_plan'},
+                 {l:'⬡ Agenda 7j',       k:'',      a:'today_deadlines'},
+                 {l:'⬡ Séance sport',    k:'em',    a:'coach_today'},
+                 {l:'⬡ Post LinkedIn',   k:'',      a:'content_linkedin'}],
+      admin:    [{l:'⬡ Checklist admin', k:'em',    a:'admin_checklist'},
+                 {l:'⬡ Échéances',       k:'amber', a:'admin_energy'},
+                 {l:'⬡ Courrier',        k:'',      a:'admin_letter'},
+                 {l:'⬡ Log Notion',      k:'',      a:'admin_log'}],
+      projects: [{l:'⬡ Liste projets',   k:'em',    a:'projects_list'},
+                 {l:'⬡ Mode exécution',  k:'em',    a:'projects_run'},
+                 {l:'⬡ Arbitrage',       k:'amber', a:'projects_arbitrate'},
+                 {l:'⬡ Blocages',        k:'red',   a:'projects_blockers'}],
+      content:  [{l:'⬡ Post LinkedIn',   k:'em',    a:'content_linkedin'},
+                 {l:'⬡ Plan SEO',        k:'',      a:'content_seo'},
+                 {l:'⬡ Recycler',        k:'',      a:'content_repurpose'},
+                 {l:'⬡ Programmer',      k:'em',    a:'content_schedule'}],
+      coach:    [{l:'⬡ Check-in',        k:'em',    a:'coach_checkin'},
+                 {l:'⬡ Entraînement',    k:'em',    a:'coach_workout'},
+                 {l:'⬡ Nutrition',       k:'',      a:'coach_nutrition'},
+                 {l:'⬡ Bilan hebdo',     k:'amber', a:'coach_weekly'}],
+    };
+
+    // ─── Rendu ───────────────────────────────────────────────────────────────
+    function renderTabs(activeMode) {
+      document.getElementById('modeTabs').innerHTML = MODES.map(m => `
+        <button class="tab${m.id === activeMode ? ' active' : ''}"
+                role="tab" aria-selected="${m.id === activeMode}"
+                onclick="go('${m.id}')">${m.label}</button>
+      `).join('');
+    }
+
+    function render(mode) {
+      currentMode = mode;
+      document.getElementById('modeChip').textContent = `mode://${mode}`;
+      renderTabs(mode);
+
+      // Cards
+      document.getElementById('cards').innerHTML = (cards[mode] || cards.today).map(c => `
+        <div class="card" onclick='send("${c.a}","${c.h}")' role="button" tabindex="0"
+             aria-label="${c.h}">
+          <div class="card-meta">
+            <span class="card-tag">${c.tag}</span>
+            <span class="card-badge">${mode}</span>
+          </div>
+          <h3>${c.h}</h3>
+          <p>${c.desc}</p>
+        </div>
+      `).join('');
+
+      // Actions
+      document.getElementById('actions').innerHTML = (actions[mode] || actions.today).map(a => `
+        <div class="action-row">
+          <div class="action-info">
+            <div class="action-label">${a.l}</div>
+            <div class="action-desc">→ Léo reçoit via proxy VPS</div>
+          </div>
+          <button class="btn ${a.k}" data-action="${a.a}"
+                  onclick='send("${a.a}","${a.l}")'>Exec</button>
+        </div>
+      `).join('');
+
+      document.getElementById('hint').innerHTML =
+        `Accès direct : <code>startapp=${mode}</code>`;
+    }
+
+    function go(mode) { render(mode) }
+
+    // ─── Init ────────────────────────────────────────────────────────────────
+    render(getStartParam());
+  </script>
+</body>
+</html>
